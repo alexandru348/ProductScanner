@@ -5,11 +5,13 @@ import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -36,6 +38,9 @@ private lateinit var cameraBtn: MaterialButton
     private lateinit var imageIv: ImageView
     private lateinit var scanBtn: MaterialButton
     private lateinit var resultTv: TextView
+    private lateinit var productNameTv: TextView
+    private lateinit var healthScoreTv: TextView
+    private lateinit var healthLevelIndicator: View
 
 
     companion object{
@@ -116,6 +121,9 @@ private lateinit var cameraBtn: MaterialButton
         imageIv = findViewById(R.id.imageIv)
         scanBtn = findViewById(R.id.scanBtn)
         resultTv = findViewById(R.id.resultTv)
+        productNameTv = findViewById(R.id.productNameTv)
+        healthScoreTv = findViewById(R.id.healthScoreTv)
+        healthLevelIndicator = findViewById(R.id.healthLevelIndicator)
 
 
         storagePermissions = arrayOf(readImagePermission())
@@ -233,30 +241,63 @@ private lateinit var cameraBtn: MaterialButton
     }
 
     private fun handleProductBarcodes(barcodes: List<Barcode>) {
-        if(barcodes.isEmpty()) {
+
+        if (barcodes.isEmpty()) {
+            productNameTv.text = ""
+            healthScoreTv.text = ""
+            healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = "No code found."
             return
         }
-        val lines = mutableListOf<String>()
-        for (barcode in barcodes){
-            if(barcode.valueType == Barcode.TYPE_PRODUCT){
+
+        val productBarcodes = mutableListOf<String>()
+
+        for (barcode in barcodes) {
+            if (barcode.valueType == Barcode.TYPE_PRODUCT) {
                 val value = barcode.rawValue ?: continue
-                lines += "${symbologyName(barcode.format)}: $value"
+                productBarcodes += value
             }
         }
-        resultTv.text = if(lines.isEmpty()){
-            "The image does not contain EAN/UPC codes."
+
+        if (productBarcodes.isEmpty()) {
+            productNameTv.text = ""
+            healthScoreTv.text = ""
+            healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
+            resultTv.text = "The image does not contain EAN/UPC codes."
+            return
         }
-        else {
-            lines.joinToString("\n")
+
+        val firstCode = productBarcodes.first()
+        val evaluation = FakeProductRepository.evaluate(firstCode)
+
+        val levelText = when (evaluation.level) {
+            HealthLevel.HEALTHY -> "Sanatos"
+            HealthLevel.MODERATE -> "Moderat"
+            HealthLevel.UNHEALTHY -> "Nesanatos"
         }
-    }
-    private fun symbologyName(format: Int): String = when (format) {
-        Barcode.FORMAT_EAN_13 -> "EAN-13"
-        Barcode.FORMAT_EAN_8 -> "EAN-8"
-        Barcode.FORMAT_UPC_A -> "UPC-A"
-        Barcode.FORMAT_UPC_E -> "UPC-E"
-        else -> "Unknown"
+
+        productNameTv.text = "Produs: ${evaluation.productName}"
+        healthScoreTv.text = "Scor de sanatate: ${evaluation.healthScore} / 100 ($levelText)"
+
+        val text = buildString {
+            appendLine("Cod de bare: ${evaluation.barcode}")
+            appendLine()
+            appendLine("De ce:")
+            appendLine(evaluation.explanation)
+            if(!evaluation.compareHint.isNullOrBlank()) {
+                appendLine()
+                appendLine("Comparativ:")
+                appendLine(evaluation.compareHint)
+            }
+        }
+        resultTv.text = text
+
+        val color = when (evaluation.level) {
+            HealthLevel.HEALTHY -> Color.parseColor("#4CAF50")
+            HealthLevel.MODERATE -> Color.parseColor("#FFC107")
+            HealthLevel.UNHEALTHY -> Color.parseColor("#F44336")
+        }
+        healthLevelIndicator.setBackgroundColor(color)
     }
 
     private fun pickImageGallery() {

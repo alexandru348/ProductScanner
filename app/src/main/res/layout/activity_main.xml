@@ -56,6 +56,27 @@
             android:layout_height="wrap_content"
             android:text="Scan" />
 
+        <TextView
+            android:id="@+id/productNameTv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Produs:"
+            android:textStyle="bold"
+            android:paddingTop="8dp"/>
+
+        <TextView
+            android:id="@+id/healthScoreTv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scor de sanatate:"
+            android:paddingBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/healthLevelIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:background="#00FF00"/>
+
 
         <TextView
             android:layout_width="match_parent"
