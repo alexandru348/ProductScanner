@@ -246,7 +246,7 @@ private lateinit var cameraBtn: MaterialButton
             productNameTv.text = ""
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
-            resultTv.text = "No readable or compatible code has been found."
+            resultTv.text = getString(R.string.msg_no_codes)
             return
         }
 
@@ -263,30 +263,32 @@ private lateinit var cameraBtn: MaterialButton
             productNameTv.text = ""
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
-            resultTv.text = "The image does not contain EAN/UPC codes."
+            resultTv.text = getString(R.string.msg_no_ean_upc)
             return
         }
 
         val firstCode = productBarcodes.first()
         val evaluation = FakeProductRepository.evaluate(firstCode)
 
-        val levelText = when (evaluation.level) {
-            HealthLevel.HEALTHY -> "Sanatos"
-            HealthLevel.MODERATE -> "Moderat"
-            HealthLevel.UNHEALTHY -> "Nesanatos"
+        val levelTextResId = when (evaluation.level) {
+            HealthLevel.HEALTHY -> R.string.health_level_healthy
+            HealthLevel.MODERATE -> R.string.health_level_moderate
+            HealthLevel.UNHEALTHY -> R.string.health_level_unhealthy
         }
 
-        productNameTv.text = "Produs: ${evaluation.productName}"
-        healthScoreTv.text = "Scor de sanatate: ${evaluation.healthScore} / 100 ($levelText)"
+        val levelText = getString(levelTextResId)
+
+        productNameTv.text = getString(R.string.product_name_format, evaluation.productName)
+        healthScoreTv.text = getString(R.string.health_score_format, evaluation.healthScore, levelText)
 
         val text = buildString {
-            appendLine("Cod de bare: ${evaluation.barcode}")
+            appendLine(getString(R.string.result_barcode_format, evaluation.barcode))
             appendLine()
-            appendLine("De ce:")
+            appendLine(getString(R.string.result_reason_title))
             appendLine(evaluation.explanation)
             if(!evaluation.compareHint.isNullOrBlank()) {
                 appendLine()
-                appendLine("Comparativ:")
+                appendLine(getString(R.string.result_compare_title))
                 appendLine(evaluation.compareHint)
             }
         }

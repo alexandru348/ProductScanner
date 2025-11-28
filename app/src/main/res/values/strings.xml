@@ -15,4 +15,24 @@
 
     <string name="label_result">Result:</string>
 
+    <string name="msg_no_codes">No readable or compatible code has been found.</string>
+
+    <string name="msg_no_ean_upc">The image does not contain EAN/UPC codes.</string>
+
+    <string name="product_name_format">Produs: %1$s</string>
+
+    <string name="health_score_format">Scor de sanatate: %1$d / 100 (%2$s)</string>
+
+    <string name="result_barcode_format">Cod de bare: %1$s</string>
+
+    <string name="result_reason_title">De ce:</string>
+
+    <string name="result_compare_title">Comparativ:</string>
+
+    <string name="health_level_healthy">Sanatos</string>
+
+    <string name="health_level_moderate">Moderat</string>
+
+    <string name="health_level_unhealthy">Nesanatos</string>
+
 </resources>
