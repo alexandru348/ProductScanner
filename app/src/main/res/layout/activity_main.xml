@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Barcode scanner"
+            android:text="@string/title_barcode_scanner"
             android:textAlignment="center"
             style="@style/TextAppearance.MaterialComponents.Headline6" />
 
@@ -32,7 +32,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="5dp"
                 android:layout_weight="1"
-                android:text="Camera" />
+                android:text="@string/btn_camera"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/galleryBtn"
@@ -40,7 +40,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:layout_weight="1"
-                android:text="Gallery" />
+                android:text="@string/btn_gallery" />
         </LinearLayout>
 
         <ImageView
@@ -54,13 +54,13 @@
             android:id="@+id/scanBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Scan" />
+            android:text="@string/btn_scan" />
 
         <TextView
             android:id="@+id/productNameTv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Produs:"
+            android:text="@string/label_product"
             android:textStyle="bold"
             android:paddingTop="8dp"/>
 
@@ -68,7 +68,7 @@
             android:id="@+id/healthScoreTv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Scor de sanatate:"
+            android:text="@string/label_health_score"
             android:paddingBottom="4dp"/>
 
         <TextView
@@ -80,8 +80,7 @@
 
         <TextView
             android:layout_width="match_parent"
-            style="@style/TextAppearance.MaterialComponents.Body1"
-            android:text="Result:"
+            android:text="@string/label_result"
             android:layout_height="wrap_content"/>
         
         <TextView

@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">Product Scanner</string>
+
+    <string name="title_barcode_scanner">Barcode scanner</string>
+
+    <string name="btn_camera">Camera</string>
+
+    <string name="btn_gallery">Gallery</string>
+
+    <string name="btn_scan">Scan</string>
+
+    <string name="label_product">Produs:</string>
+
+    <string name="label_health_score">Scor de sanatate:</string>
+
+    <string name="label_result">Result:</string>
+
 </resources>
