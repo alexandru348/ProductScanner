@@ -246,7 +246,7 @@ private lateinit var cameraBtn: MaterialButton
             productNameTv.text = ""
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
-            resultTv.text = "No code found."
+            resultTv.text = "No readable or compatible code has been found."
             return
         }
 
