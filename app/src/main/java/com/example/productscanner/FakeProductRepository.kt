@@ -29,7 +29,7 @@ object FakeProductRepository {
             healthScore = 50,
             level = HealthLevel.MODERATE,
             explanation = "Produsul nu exista inca in baza de date a aplicatiei. Fara informatii despre ingrediente, este considerat neutru.",
-            compareHint = "Pentru o evaliuare corecta, este nevoie de o baza de date cu ingrediente preluata dintr-o sursa online."
+            compareHint = "Pentru o evaluare corecta, este nevoie de o baza de date cu ingrediente preluata dintr-o sursa online."
         )
     }
 }

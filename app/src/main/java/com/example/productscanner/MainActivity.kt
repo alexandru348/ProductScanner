@@ -268,8 +268,34 @@ private lateinit var cameraBtn: MaterialButton
         }
 
         val firstCode = productBarcodes.first()
-        val evaluation = FakeProductRepository.evaluate(firstCode)
 
+        Log.d("BARCODE", "Scanned barcode: $firstCode")
+
+        OnlineProductRepository.evaluate(
+            barcode = firstCode,
+
+            onResult = { onlineEvaluation ->
+
+                Log.d("FIRESTORE", "onResult: onlineEvaluation = $onlineEvaluation")
+
+                val evaluation = onlineEvaluation
+
+                    ?: FakeProductRepository.evaluate(barcode = firstCode)
+
+                showProductEvaluation(evaluation)
+            },
+
+            onError = { e ->
+                Log.e("BARCODE", "Error loading from Firestore", e)
+
+                val evaluation = FakeProductRepository.evaluate(barcode = firstCode)
+
+                showProductEvaluation(evaluation)
+            }
+        )
+    }
+
+    private fun showProductEvaluation(evaluation: ProductEvaluation) {
         val levelTextResId = when (evaluation.level) {
             HealthLevel.HEALTHY -> R.string.health_level_healthy
             HealthLevel.MODERATE -> R.string.health_level_moderate
