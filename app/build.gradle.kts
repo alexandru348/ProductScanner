@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -38,13 +40,17 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
