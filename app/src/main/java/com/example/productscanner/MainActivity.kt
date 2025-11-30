@@ -219,7 +219,7 @@ private lateinit var cameraBtn: MaterialButton
     }
 
     private fun detectResultFromImage(){
-        Log.d(TAG, "detectResultFromImage: ")
+        Log.d(TAG, "detectResultFromImage: ") // Log: entry point for starting barcode detection from the selected image
         try {
 
             val inputImage = InputImage.fromFilePath(this, imageUri!!)
@@ -269,14 +269,14 @@ private lateinit var cameraBtn: MaterialButton
 
         val firstCode = productBarcodes.first()
 
-        Log.d("BARCODE", "Scanned barcode: $firstCode")
+        Log.d("BARCODE", "Scanned barcode: $firstCode") // Log: print the first detected barcode value to Logcat so we know what is being sent further
 
         OnlineProductRepository.evaluate(
             barcode = firstCode,
 
             onResult = { onlineEvaluation ->
 
-                Log.d("FIRESTORE", "onResult: onlineEvaluation = $onlineEvaluation")
+                Log.d("FIRESTORE", "onResult: onlineEvaluation = $onlineEvaluation") // Log: see what response came back from Firestore (null or a complete ProductEvaluation object)
 
                 val evaluation = onlineEvaluation
 
@@ -286,7 +286,7 @@ private lateinit var cameraBtn: MaterialButton
             },
 
             onError = { e ->
-                Log.e("BARCODE", "Error loading from Firestore", e)
+                Log.e("BARCODE", "Error loading from Firestore", e) // Log (error): something went wrong while reading data from Firestore; print the exception for debugging
 
                 val evaluation = FakeProductRepository.evaluate(barcode = firstCode)
 
