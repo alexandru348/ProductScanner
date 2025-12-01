@@ -29,6 +29,10 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.core.content.getSystemService
 
 
 class MainActivity : AppCompatActivity() {
@@ -271,6 +275,16 @@ private lateinit var cameraBtn: MaterialButton
 
         Log.d("BARCODE", "Scanned barcode: $firstCode") // Log: print the first detected barcode value to Logcat so we know what is being sent further
 
+        if(!hasInternetConnection()) {
+
+            Log.d("BARCODE", "No internet connection, using local repository")
+
+            val evaluation = LocalProductRepository.evaluate(barcode = firstCode)
+
+            showProductEvaluation(evaluation)
+
+            return
+        }
         OnlineProductRepository.evaluate(
             barcode = firstCode,
 
@@ -509,5 +523,20 @@ private lateinit var cameraBtn: MaterialButton
 
     private fun showToast(message: String){
         Toast.makeText(this,message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun hasInternetConnection(): Boolean {
+
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val network = connectivityManager.activeNetwork ?: return false
+
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 }
