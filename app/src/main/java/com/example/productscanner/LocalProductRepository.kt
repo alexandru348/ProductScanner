@@ -1,8 +1,6 @@
 package com.example.productscanner
 
-import com.google.mlkit.vision.barcode.common.Barcode
-
-object FakeProductRepository {
+object LocalProductRepository {
 
     private val products: Map<String, ProductEvaluation> = mapOf(
         "5901234123457" to ProductEvaluation(
@@ -19,7 +17,7 @@ object FakeProductRepository {
             healthScore = 80,
             level = HealthLevel.HEALTHY,
             explanation = "Contin fibre, putin zahar, grasimi reduse. Potrivite pentru consum zilnic, in cantitati moderate.",
-            compareHint = "Mai sanatoase decat cerealele cu ciocolaata si zahar adaugat."
+            compareHint = "Mai sanatoase decat cerealele cu ciocolata si zahar adaugat."
         )
     )
     fun evaluate(barcode: String): ProductEvaluation {

@@ -280,7 +280,7 @@ private lateinit var cameraBtn: MaterialButton
 
                 val evaluation = onlineEvaluation
 
-                    ?: FakeProductRepository.evaluate(barcode = firstCode)
+                    ?: LocalProductRepository.evaluate(barcode = firstCode)
 
                 showProductEvaluation(evaluation)
             },
@@ -288,7 +288,7 @@ private lateinit var cameraBtn: MaterialButton
             onError = { e ->
                 Log.e("BARCODE", "Error loading from Firestore", e) // Log (error): something went wrong while reading data from Firestore; print the exception for debugging
 
-                val evaluation = FakeProductRepository.evaluate(barcode = firstCode)
+                val evaluation = LocalProductRepository.evaluate(barcode = firstCode)
 
                 showProductEvaluation(evaluation)
             }
