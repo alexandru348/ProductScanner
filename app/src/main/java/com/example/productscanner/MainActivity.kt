@@ -277,7 +277,7 @@ private lateinit var cameraBtn: MaterialButton
 
         if(!hasInternetConnection()) {
 
-            Log.d("BARCODE", "No internet connection, using local repository")
+            Log.d("BARCODE", "No internet connection, using local repository") // Log: no internet -> skip Firestore and use local product database
 
             val evaluation = LocalProductRepository.evaluate(barcode = firstCode)
 
