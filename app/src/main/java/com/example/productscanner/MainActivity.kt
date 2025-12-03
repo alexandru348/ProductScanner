@@ -43,11 +43,11 @@ private lateinit var cameraBtn: MaterialButton
     private lateinit var scanBtn: MaterialButton
     private lateinit var resultTv: TextView
     private lateinit var productNameTv: TextView
-
     private lateinit var barcodeTv: TextView
     private lateinit var healthScoreTv: TextView
     private lateinit var healthLevelIndicator: View
     private lateinit var compareTv: TextView
+    private lateinit var resultLabelTv: TextView
 
 
     companion object{
@@ -128,6 +128,7 @@ private lateinit var cameraBtn: MaterialButton
         imageIv = findViewById(R.id.imageIv)
         scanBtn = findViewById(R.id.scanBtn)
         resultTv = findViewById(R.id.resultTv)
+        resultLabelTv = findViewById(R.id.resultLabelTv)
         compareTv = findViewById(R.id.compareTv)
         productNameTv = findViewById(R.id.productNameTv)
         barcodeTv = findViewById(R.id.barcodeTv)
@@ -255,9 +256,11 @@ private lateinit var cameraBtn: MaterialButton
             productNameTv.text = ""
             barcodeTv.text = ""
             healthScoreTv.text = ""
+            healthLevelIndicator.visibility = View.GONE
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_codes)
             compareTv.text = ""
+            resultLabelTv.visibility = View.GONE
             return
         }
 
@@ -274,9 +277,11 @@ private lateinit var cameraBtn: MaterialButton
             productNameTv.text = ""
             barcodeTv.text = ""
             healthScoreTv.text = ""
+            healthLevelIndicator.visibility = View.GONE
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_ean_upc)
             compareTv.text = ""
+            resultLabelTv.visibility = View.GONE
             return
         }
 
@@ -319,6 +324,11 @@ private lateinit var cameraBtn: MaterialButton
     }
 
     private fun showProductEvaluation(evaluation: ProductEvaluation) {
+
+        resultLabelTv.visibility = View.VISIBLE
+
+        resultLabelTv.text = getString(R.string.label_result)
+
         val levelTextResId = when (evaluation.level) {
             HealthLevel.HEALTHY -> R.string.health_level_healthy
             HealthLevel.MODERATE -> R.string.health_level_moderate
@@ -386,6 +396,7 @@ private lateinit var cameraBtn: MaterialButton
             HealthLevel.MODERATE -> Color.parseColor("#FFC107")
             HealthLevel.UNHEALTHY -> Color.parseColor("#F44336")
         }
+        healthLevelIndicator.visibility = View.VISIBLE
         healthLevelIndicator.setBackgroundColor(color)
     }
 
