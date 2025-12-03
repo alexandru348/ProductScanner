@@ -11,6 +11,8 @@
 
     <string name="label_product">Produs:</string>
 
+    <string name="label_barcode">Cod de bare:</string>
+
     <string name="label_health_score">Scor de sanatate:</string>
 
     <string name="label_result">Rezultat:</string>

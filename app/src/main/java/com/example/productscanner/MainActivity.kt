@@ -43,6 +43,8 @@ private lateinit var cameraBtn: MaterialButton
     private lateinit var scanBtn: MaterialButton
     private lateinit var resultTv: TextView
     private lateinit var productNameTv: TextView
+
+    private lateinit var barcodeTv: TextView
     private lateinit var healthScoreTv: TextView
     private lateinit var healthLevelIndicator: View
 
@@ -126,6 +128,7 @@ private lateinit var cameraBtn: MaterialButton
         scanBtn = findViewById(R.id.scanBtn)
         resultTv = findViewById(R.id.resultTv)
         productNameTv = findViewById(R.id.productNameTv)
+        barcodeTv = findViewById(R.id.barcodeTv)
         healthScoreTv = findViewById(R.id.healthScoreTv)
         healthLevelIndicator = findViewById(R.id.healthLevelIndicator)
 
@@ -248,6 +251,7 @@ private lateinit var cameraBtn: MaterialButton
 
         if (barcodes.isEmpty()) {
             productNameTv.text = ""
+            barcodeTv.text = ""
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_codes)
@@ -265,6 +269,7 @@ private lateinit var cameraBtn: MaterialButton
 
         if (productBarcodes.isEmpty()) {
             productNameTv.text = ""
+            barcodeTv.text = ""
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_ean_upc)
@@ -318,20 +323,50 @@ private lateinit var cameraBtn: MaterialButton
 
         val levelText = getString(levelTextResId)
 
-        productNameTv.text = getString(R.string.product_name_format, evaluation.productName)
-        healthScoreTv.text = getString(R.string.health_score_format, evaluation.healthScore, levelText)
+        productNameTv.text = getString(
+
+            R.string.product_name_format,
+
+            evaluation.productName
+
+        )
+
+        barcodeTv.text = getString(
+
+            R.string.result_barcode_format,
+
+            evaluation.barcode
+
+        )
+
+        healthScoreTv.text = getString(
+
+            R.string.health_score_format,
+
+            evaluation.healthScore,
+
+            levelText
+
+        )
 
         val text = buildString {
-            appendLine(getString(R.string.result_barcode_format, evaluation.barcode))
-            appendLine()
+
             appendLine(getString(R.string.result_reason_title))
+
             appendLine(evaluation.explanation)
+
             if(!evaluation.compareHint.isNullOrBlank()) {
+
                 appendLine()
+
                 appendLine(getString(R.string.result_compare_title))
+
                 appendLine(evaluation.compareHint)
+
             }
+
         }
+
         resultTv.text = text
 
         val color = when (evaluation.level) {
