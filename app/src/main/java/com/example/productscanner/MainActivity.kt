@@ -47,6 +47,7 @@ private lateinit var cameraBtn: MaterialButton
     private lateinit var barcodeTv: TextView
     private lateinit var healthScoreTv: TextView
     private lateinit var healthLevelIndicator: View
+    private lateinit var compareTv: TextView
 
 
     companion object{
@@ -127,6 +128,7 @@ private lateinit var cameraBtn: MaterialButton
         imageIv = findViewById(R.id.imageIv)
         scanBtn = findViewById(R.id.scanBtn)
         resultTv = findViewById(R.id.resultTv)
+        compareTv = findViewById(R.id.compareTv)
         productNameTv = findViewById(R.id.productNameTv)
         barcodeTv = findViewById(R.id.barcodeTv)
         healthScoreTv = findViewById(R.id.healthScoreTv)
@@ -255,6 +257,7 @@ private lateinit var cameraBtn: MaterialButton
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_codes)
+            compareTv.text = ""
             return
         }
 
@@ -273,6 +276,7 @@ private lateinit var cameraBtn: MaterialButton
             healthScoreTv.text = ""
             healthLevelIndicator.setBackgroundColor(Color.TRANSPARENT)
             resultTv.text = getString(R.string.msg_no_ean_upc)
+            compareTv.text = ""
             return
         }
 
@@ -349,25 +353,33 @@ private lateinit var cameraBtn: MaterialButton
 
         )
 
-        val text = buildString {
+        val categoryText = buildString {
 
             appendLine(getString(R.string.result_category_title))
 
-            appendLine(evaluation.explanation)
-
-            if(!evaluation.compareHint.isNullOrBlank()) {
-
-                appendLine()
-
-                appendLine(getString(R.string.result_compare_title))
-
-                appendLine(evaluation.compareHint)
-
-            }
+            append(evaluation.explanation)
 
         }
 
-        resultTv.text = text
+        resultTv.text = categoryText
+
+        if (!evaluation.compareHint.isNullOrBlank()) {
+
+            val compareText = buildString {
+
+                appendLine(getString(R.string.result_compare_title))
+
+                append(evaluation.compareHint)
+
+            }
+
+            compareTv.text = compareText
+
+        } else {
+
+            compareTv.text = ""
+
+        }
 
         val color = when (evaluation.level) {
             HealthLevel.HEALTHY -> Color.parseColor("#4CAF50")
