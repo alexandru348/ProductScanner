@@ -27,7 +27,7 @@
 
     <string name="result_barcode_format">Cod de bare: %1$s</string>
 
-    <string name="result_reason_title">De ce:</string>
+    <string name="result_category_title">Categoria:</string>
 
     <string name="result_compare_title">Comparativ:</string>
 

@@ -351,7 +351,7 @@ private lateinit var cameraBtn: MaterialButton
 
         val text = buildString {
 
-            appendLine(getString(R.string.result_reason_title))
+            appendLine(getString(R.string.result_category_title))
 
             appendLine(evaluation.explanation)
 
