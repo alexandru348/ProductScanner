@@ -32,7 +32,7 @@ import com.google.mlkit.vision.common.InputImage
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import androidx.core.content.getSystemService
+
 
 
 class MainActivity : AppCompatActivity() {
