@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
@@ -41,14 +40,36 @@
                 android:layout_marginStart="5dp"
                 android:layout_weight="1"
                 android:text="@string/btn_gallery" />
+
+
         </LinearLayout>
 
+        <FrameLayout
+            android:id="@+id/imageContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
         <ImageView
             android:id="@+id/imageIv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_android_black_24dp" />
+
+        <com.example.productscanner.CropOverlayView
+            android:id="@+id/cropOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility= "visible"/>
+        </FrameLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cropBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Decupeaza"
+            android:enabled="true" /> <!-- temporar, de test, dupa testare trecem inapoi pe "false" -->
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/scanBtn"
