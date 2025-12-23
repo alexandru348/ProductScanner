@@ -12,3 +12,4 @@ captures/
 *.jks
 .DS_Store
 Thumbs.db
+*.logcat

@@ -60,7 +60,8 @@
             android:id="@+id/cropOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility= "visible"/>
+            android:visibility= "gone"
+            android:layerType="software"/>
         </FrameLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -69,7 +70,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="Decupeaza"
-            android:enabled="true" /> <!-- temporar, de test, dupa testare trecem inapoi pe "false" -->
+            android:enabled="false"
+            android:visibility="gone"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/scanBtn"

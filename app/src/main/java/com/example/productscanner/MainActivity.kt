@@ -35,7 +35,7 @@ import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
-import androidx.annotation.Size
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -82,6 +82,9 @@ private lateinit var cameraBtn: MaterialButton
 
        private var imageUri: Uri? = null
 
+       private var previousImageUri: Uri? = null
+
+
        private var isScanning = false
 
        private val FALLBACK_MAX_SIZE = 1600
@@ -92,9 +95,17 @@ private lateinit var cameraBtn: MaterialButton
                if(success && imageUri != null) {
                    imageIv.setImageURI(imageUri)
                    scanBtn.isEnabled = true
+                   updateCropAvailability(true)
+                   previousImageUri = null
                }
                else {
-                   scanBtn.isEnabled = false
+                   imageUri = previousImageUri
+                   imageIv.setImageURI(imageUri)
+
+                   val hasImage = (imageUri != null)
+                   scanBtn.isEnabled = hasImage
+                   updateCropAvailability(hasImage)
+                   previousImageUri = null
                    showToast("No picture was taken")
                }
            }
@@ -117,13 +128,26 @@ private lateinit var cameraBtn: MaterialButton
             requestCameraPermission()
             return
         }
+
+        previousImageUri = imageUri // the old picture is saved
+
+        scanBtn.isEnabled = false
+        updateCropAvailability(false)
+
         imageUri = createImageUri()
         if(imageUri == null) {
+            imageUri = previousImageUri
+            imageIv.setImageURI(imageUri) // to make sure the UI is correct
+
+            val hasImage = (imageUri != null)
+            scanBtn.isEnabled = hasImage
+            updateCropAvailability(hasImage)
+
+            previousImageUri = null
+
             showToast("I can't create a file for the photo")
             return
         }
-
-        scanBtn.isEnabled = false
 
         takePhotoLauncher.launch(imageUri)
     }
@@ -139,9 +163,11 @@ private lateinit var cameraBtn: MaterialButton
                imageUri = uri
                imageIv.setImageURI(uri)
                scanBtn.isEnabled = true
+               updateCropAvailability(true)
            }
            else {
                scanBtn.isEnabled = (imageUri != null)
+               updateCropAvailability(imageUri != null)
                if (imageUri == null) {
                    showToast("Cancelled...")
                }
@@ -160,8 +186,11 @@ private lateinit var cameraBtn: MaterialButton
         scanBtn = findViewById(R.id.scanBtn)
         scanBtn.isEnabled = false
         cropBtn = findViewById(R.id.cropBtn)
-        cropBtn.isEnabled = true
+        cropBtn.isEnabled = false
+        cropBtn.visibility = View.GONE
         cropOverlay = findViewById(R.id.cropOverlay)
+        cropOverlay.isEnabled = false
+        cropOverlay.visibility = View.GONE
         resultTv = findViewById(R.id.resultTv)
         resultLabelTv = findViewById(R.id.resultLabelTv)
         compareTv = findViewById(R.id.compareTv)
@@ -232,14 +261,24 @@ private lateinit var cameraBtn: MaterialButton
                 return@setOnClickListener
             }
 
+            updateCropAvailability(false)
+
             isScanning = true
             scanBtn.isEnabled = false
+            cameraBtn.isEnabled = false
+            galleryBtn.isEnabled = false
 
             detectResultFromImage(uri, triedDownscaled = false)
         }
 
+
         cropBtn.setOnClickListener {
-            showToast("Crop button pressed (test)")
+            if (imageUri == null) return@setOnClickListener // without a picture, it makes no sense to crop
+
+            val show = cropOverlay.visibility != View.VISIBLE
+            cropOverlay.visibility = if (show) View.VISIBLE else View.GONE
+            cropOverlay.isEnabled = show
+            if (show) cropOverlay.bringToFront()
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -268,8 +307,7 @@ private lateinit var cameraBtn: MaterialButton
         val scanner = barcodeScanner
         if (scanner == null) {
             showToast("The scanner is not ready")
-            isScanning = false
-            scanBtn.isEnabled = (imageUri != null)
+            finishScanUi()
             return
         }
 
@@ -300,29 +338,25 @@ private lateinit var cameraBtn: MaterialButton
                         detectResultFromImageDownscaled(uri)
                     } else {
                         handleProductBarcodes(barcodes)
-                        isScanning = false
-                        scanBtn.isEnabled = (imageUri != null)
+                        finishScanUi()
                     }
                 }
                 .addOnFailureListener { e ->
                     Log.e(TAG, "detectResultFromImage failed", e)
                     showToast("Failed scanning due to ${e.message}")
-                    isScanning = false
-                    scanBtn.isEnabled = (imageUri != null)
+                    finishScanUi()
                 }
         } catch (e: Exception) {
             Log.e(TAG, "detectResultFromImage exception", e)
             showToast("Failed due to ${e.message}")
-            isScanning = false
-            scanBtn.isEnabled = (imageUri != null)
+            finishScanUi()
         }
     }
 
     private fun detectResultFromImageDownscaled(uri: Uri) {
         val scanner = barcodeScanner
         if(scanner == null) {
-            isScanning = false
-            scanBtn.isEnabled = (imageUri != null)
+            finishScanUi()
             return
         }
 
@@ -330,8 +364,7 @@ private lateinit var cameraBtn: MaterialButton
         if(bmp == null) {
 
             showToast("Could not decode image")
-            isScanning = false
-            scanBtn.isEnabled = (imageUri != null)
+            finishScanUi()
             return
         }
 
@@ -351,15 +384,13 @@ private lateinit var cameraBtn: MaterialButton
                     showToast("Failed scanning due to ${e.message}")
                 }
                 .addOnCompleteListener {
-                    isScanning = false
-                    scanBtn.isEnabled = (imageUri != null)
+                    finishScanUi()
                     if(!bmp.isRecycled) bmp.recycle()
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Downscaled scan exception", e)
             showToast("Failed scanning due to ${e.message}")
-            isScanning = false
-            scanBtn.isEnabled = (imageUri != null)
+            finishScanUi()
             if(!bmp.isRecycled) bmp.recycle()
         }
     }
@@ -617,6 +648,7 @@ private lateinit var cameraBtn: MaterialButton
         // 1) User a ieșit din galerie / a dat Back / Cancel
         if (result.resultCode != Activity.RESULT_OK) {
             scanBtn.isEnabled = (imageUri != null)
+            updateCropAvailability(imageUri != null)
             if (imageUri == null) {
                 showToast("Cancelled...")
             }
@@ -630,6 +662,7 @@ private lateinit var cameraBtn: MaterialButton
         // 3) Dacă a intrat dar nu a ales nimic (sau provider-ul nu a întors uri)
         if (newUri == null) {
             scanBtn.isEnabled = (imageUri != null)
+            updateCropAvailability(imageUri != null)
             if (imageUri == null) {
                 showToast("Cancelled...")
             }
@@ -640,6 +673,7 @@ private lateinit var cameraBtn: MaterialButton
         imageUri = newUri
         imageIv.setImageURI(newUri)
         scanBtn.isEnabled = true
+        updateCropAvailability(true)
 
         // 5) Încercăm să păstrăm permisiunea (merge în special cu ACTION_OPEN_DOCUMENT)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -744,6 +778,25 @@ private lateinit var cameraBtn: MaterialButton
 
     private fun showToast(message: String){
         Toast.makeText(this,message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun finishScanUi() {
+        isScanning = false
+        val hasImage = (imageUri != null)
+        scanBtn.isEnabled = hasImage
+        updateCropAvailability(hasImage)
+        cameraBtn.isEnabled = true
+        galleryBtn.isEnabled = true
+    }
+
+    private fun updateCropAvailability(hasImage: Boolean) {
+        cropBtn.isEnabled = hasImage
+        cropBtn.visibility = if (hasImage) View.VISIBLE else View.GONE
+
+        // The overlay stays hidden by default; shown only when entering Crop mode
+            cropOverlay.isEnabled = false
+            cropOverlay.visibility = View.GONE
+
     }
 
     private fun hasInternetConnection(): Boolean {
