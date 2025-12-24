@@ -87,23 +87,35 @@ private lateinit var cameraBtn: MaterialButton
 
        private var isScanning = false
 
+       private var isCropMode = false
+
        private val FALLBACK_MAX_SIZE = 1600
 
        private val takePhotoLauncher =
-           registerForActivityResult(ActivityResultContracts.TakePicture()) {
-            success ->
-               if(success && imageUri != null) {
+           registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+
+               Log.d(TAG, "takePhotoResultLauncher result success=$success imageUri=$imageUri previous=$previousImageUri")
+
+                   if(success && imageUri != null) {
                    imageIv.setImageURI(imageUri)
-                   scanBtn.isEnabled = true
-                   updateCropAvailability(true)
+                   setCropMode(false)
+                   updateCropAvailability(imageUri != null)
                    previousImageUri = null
                }
                else {
+                   // delete the empty MediaStore entry created for the camera capture
+                   imageUri?.let { newUri ->
+                       if (newUri != previousImageUri) {
+                           try {
+                               contentResolver.delete(newUri, null, null)
+                           } catch (_: Exception) {}
+                       }
+                   }
+
                    imageUri = previousImageUri
                    imageIv.setImageURI(imageUri)
 
                    val hasImage = (imageUri != null)
-                   scanBtn.isEnabled = hasImage
                    updateCropAvailability(hasImage)
                    previousImageUri = null
                    showToast("No picture was taken")
@@ -124,14 +136,15 @@ private lateinit var cameraBtn: MaterialButton
     }
 
     private fun startCameraCapture() {
+        Log.d(TAG, "startCameraCapture() oldImageUri=$imageUri")
         if(!checkCameraPermissions()) {
             requestCameraPermission()
             return
         }
 
         previousImageUri = imageUri // the old picture is saved
+        setCropMode(false)
 
-        scanBtn.isEnabled = false
         updateCropAvailability(false)
 
         imageUri = createImageUri()
@@ -140,7 +153,6 @@ private lateinit var cameraBtn: MaterialButton
             imageIv.setImageURI(imageUri) // to make sure the UI is correct
 
             val hasImage = (imageUri != null)
-            scanBtn.isEnabled = hasImage
             updateCropAvailability(hasImage)
 
             previousImageUri = null
@@ -152,8 +164,6 @@ private lateinit var cameraBtn: MaterialButton
         takePhotoLauncher.launch(imageUri)
     }
 
-
-
        private var barcodeScannerOptions: BarcodeScannerOptions? = null
        private var barcodeScanner: BarcodeScanner? = null
 
@@ -162,11 +172,11 @@ private lateinit var cameraBtn: MaterialButton
            if(uri != null) {
                imageUri = uri
                imageIv.setImageURI(uri)
-               scanBtn.isEnabled = true
-               updateCropAvailability(true)
+               setCropMode(false)
+               updateCropAvailability(imageUri != null)
            }
            else {
-               scanBtn.isEnabled = (imageUri != null)
+               setCropMode(false)
                updateCropAvailability(imageUri != null)
                if (imageUri == null) {
                    showToast("Cancelled...")
@@ -261,24 +271,19 @@ private lateinit var cameraBtn: MaterialButton
                 return@setOnClickListener
             }
 
-            updateCropAvailability(false)
-
             isScanning = true
-            scanBtn.isEnabled = false
-            cameraBtn.isEnabled = false
-            galleryBtn.isEnabled = false
+            setCropMode(false)
+            updateCropAvailability(imageUri != null)
 
             detectResultFromImage(uri, triedDownscaled = false)
         }
 
-
         cropBtn.setOnClickListener {
-            if (imageUri == null) return@setOnClickListener // without a picture, it makes no sense to crop
+            // If there's no image or the user is scanning, crop doesn't make sense
+            if (imageUri == null || isScanning) return@setOnClickListener
+            setCropMode(!isCropMode)
 
-            val show = cropOverlay.visibility != View.VISIBLE
-            cropOverlay.visibility = if (show) View.VISIBLE else View.GONE
-            cropOverlay.isEnabled = show
-            if (show) cropOverlay.bringToFront()
+            if (isCropMode) cropOverlay.bringToFront()
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -647,7 +652,6 @@ private lateinit var cameraBtn: MaterialButton
 
         // 1) User a ieșit din galerie / a dat Back / Cancel
         if (result.resultCode != Activity.RESULT_OK) {
-            scanBtn.isEnabled = (imageUri != null)
             updateCropAvailability(imageUri != null)
             if (imageUri == null) {
                 showToast("Cancelled...")
@@ -661,7 +665,6 @@ private lateinit var cameraBtn: MaterialButton
 
         // 3) Dacă a intrat dar nu a ales nimic (sau provider-ul nu a întors uri)
         if (newUri == null) {
-            scanBtn.isEnabled = (imageUri != null)
             updateCropAvailability(imageUri != null)
             if (imageUri == null) {
                 showToast("Cancelled...")
@@ -672,8 +675,8 @@ private lateinit var cameraBtn: MaterialButton
         // 4) Avem Uri valid => păstrăm imaginea și activăm scan
         imageUri = newUri
         imageIv.setImageURI(newUri)
-        scanBtn.isEnabled = true
-        updateCropAvailability(true)
+        setCropMode(false)
+        updateCropAvailability(imageUri != null)
 
         // 5) Încercăm să păstrăm permisiunea (merge în special cu ACTION_OPEN_DOCUMENT)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -782,21 +785,33 @@ private lateinit var cameraBtn: MaterialButton
 
     private fun finishScanUi() {
         isScanning = false
-        val hasImage = (imageUri != null)
-        scanBtn.isEnabled = hasImage
+        val hasImage = imageUri != null
         updateCropAvailability(hasImage)
-        cameraBtn.isEnabled = true
-        galleryBtn.isEnabled = true
     }
 
     private fun updateCropAvailability(hasImage: Boolean) {
-        cropBtn.isEnabled = hasImage
+        // Scan / Crop depends om: there is an image + the user is not scanning
+        val canInteract = hasImage && !isScanning
+
+        cropBtn.isEnabled = canInteract
+        scanBtn.isEnabled = canInteract
+
+        // Camera / Gallery: usually blocks while the user is scanning
+        cameraBtn.isEnabled = !isScanning
+        galleryBtn.isEnabled = !isScanning
+
         cropBtn.visibility = if (hasImage) View.VISIBLE else View.GONE
 
-        // The overlay stays hidden by default; shown only when entering Crop mode
-            cropOverlay.isEnabled = false
-            cropOverlay.visibility = View.GONE
+        // If the user doesn't have an image, there's no way to keep crop mode on
+        if (!hasImage) {
+          setCropMode(false)
+        }
+    }
 
+    private fun setCropMode(enabled: Boolean) {
+        isCropMode = enabled
+        cropOverlay.visibility = if (enabled) View.VISIBLE else View.GONE
+        cropOverlay.isEnabled = enabled
     }
 
     private fun hasInternetConnection(): Boolean {
