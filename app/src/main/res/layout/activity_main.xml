@@ -60,7 +60,7 @@
             android:id="@+id/cropOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility= "gone"
+            android:visibility="gone"
             android:layerType="software"/>
         </FrameLayout>
 
@@ -69,7 +69,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="Decupeaza"
+            android:text="@string/btn_crop"
             android:enabled="false"
             android:visibility="gone"/>
 

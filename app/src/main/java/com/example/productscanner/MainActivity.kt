@@ -35,6 +35,10 @@ import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import android.graphics.RectF
+import android.graphics.drawable.BitmapDrawable
+
 
 
 
@@ -272,10 +276,25 @@ private lateinit var cameraBtn: MaterialButton
             }
 
             isScanning = true
-            setCropMode(false)
             updateCropAvailability(imageUri != null)
 
-            detectResultFromImage(uri, triedDownscaled = false)
+            if (isCropMode) {
+                // The real crop is done (before hiding the overlay)
+                val cropped = getCroppedBitmapFromOverlay()
+                if (cropped == null) {
+                    showToast("Invalid crop area")
+                    finishScanUi()
+                    return@setOnClickListener
+                }
+                // After the bitmap has been taken, crop mode is closed
+                setCropMode(false)
+
+                // The cropped bitmap is scanned
+                detectResultFromBitmap(cropped)
+            } else {
+                // The full image is scanned
+                detectResultFromImage(uri, triedDownscaled = false)
+            }
         }
 
         cropBtn.setOnClickListener {
@@ -400,6 +419,81 @@ private lateinit var cameraBtn: MaterialButton
         }
     }
 
+    private fun getCroppedBitmapFromOverlay(): Bitmap? {
+        // The bitmap is taken exactly as it is loaded into the imageView (the one over which the overlay is placed)
+        val drawable = imageIv.drawable as? BitmapDrawable ?: return null
+        val originalBitmap = drawable.bitmap ?: return null
+
+        // The crop rect in the overlay coordinates (which coincide with the imageView coordinates)
+        val cropRectView = cropOverlay.getCropRectInOverlay()
+
+        // Protection: rect very small / invalid rect
+        if (cropRectView.width() < 10f || cropRectView.height() < 10f) return null
+
+        // Convert the rectangle from View coordinates -> Drawable coordinates (bitmap)
+        // The inverse of the ImageView matrix is used (scale/translate)
+        val imageMatrix = Matrix(imageIv.imageMatrix)
+        val inverse = Matrix()
+        val invertedOk = imageMatrix.invert(inverse)
+        if (!invertedOk) return null
+
+        val cropRectDrawable = RectF(cropRectView)
+        inverse.mapRect(cropRectDrawable)
+
+        // Clamping to the bitmap dimensions (so it doesn't go outside of it)
+        val left = cropRectDrawable.left.coerceIn(0f, originalBitmap.width.toFloat())
+        val top = cropRectDrawable.top.coerceIn(0f, originalBitmap.height.toFloat())
+        val right = cropRectDrawable.right.coerceIn(0f, originalBitmap.width.toFloat())
+        val bottom = cropRectDrawable.bottom.coerceIn(0f, originalBitmap.height.toFloat())
+
+        val w = (right - left).toInt()
+        val h = (bottom - top).toInt()
+
+        if (w <= 0 || h <= 0) return null
+
+        // Real crop
+        return try {
+            Bitmap.createBitmap(originalBitmap, left.toInt(), top.toInt(), w, h)
+        } catch (e: Exception) {
+            Log.e(TAG, "Crop failed", e)
+            null
+        }
+    }
+
+    private fun detectResultFromBitmap(bitmap: Bitmap) {
+        val scanner = barcodeScanner
+        if (scanner == null) {
+            showToast("The scanner is not ready")
+            finishScanUi()
+            return
+        }
+
+        try {
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+
+            scanner.process(inputImage)
+                .addOnSuccessListener { barcodes ->
+                    Log.d(TAG, "bitmap onSuccess: barcode.size=${barcodes.size}")
+                    barcodes.forEachIndexed { i, b ->
+                        Log.d(TAG, "[BM $i] format=${b.format} raw=${b.rawValue} display=${b.displayValue}")
+                    }
+                    handleProductBarcodes(barcodes)
+                }
+                .addOnFailureListener { e ->
+                    Log.d(TAG, "Bitmap scan failed", e)
+                    showToast("Failed scanning due to ${e.message}")
+                }
+                .addOnCompleteListener {
+                    finishScanUi()
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "detectResultFromBitmap exception", e)
+            showToast("Failed due to ${e.message}")
+            finishScanUi()
+            if (!bitmap.isRecycled) bitmap.recycle()
+        }
+    }
     private fun loadDownscaledBitmap(uri: Uri, maxSize: Int): Bitmap? {
         return try {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

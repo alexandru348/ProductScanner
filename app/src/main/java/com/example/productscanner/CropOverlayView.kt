@@ -259,4 +259,9 @@ class CropOverlayView @JvmOverloads constructor(
         val minBottom = cropRect.top + minCropSize
         cropRect.bottom = newBottom.coerceIn(minBottom, height.toFloat())
     }
+
+    fun getCropRectInOverlay(): RectF {
+        // returns current crop rectangle in overlay (view) coordinates
+        return RectF(cropRect) // copy, so external code can't modify internal rect
+    }
 }

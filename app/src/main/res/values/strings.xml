@@ -7,6 +7,8 @@
 
     <string name="btn_gallery">Galerie</string>
 
+    <string name="btn_crop">Decupeaza</string>
+
     <string name="btn_scan">Scaneaza</string>
 
     <string name="label_product">Produs:</string>
