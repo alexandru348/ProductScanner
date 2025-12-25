@@ -36,11 +36,11 @@ from selected zone) is the next step.
 
 ## Project structure
 
-1. "app/src/main/java/com/example/productscanner"
+1. `app/src/main/java/com/example/productscanner`
 - MainActivity + repositories + crop overlay view
-2. "app/src/main/res/layout/activity_main.xml"
+2. `app/src/main/res/layout/activity_main.xml`
 - Main layout
-3. "app/google-services.json"
+3. `app/google-services.json`
 - not included in the repo (see Firebase setup)
 
 ## Requirements
@@ -64,26 +64,26 @@ git clone https://github.com/alexandru348/ProductScanner.git
 
 ## Firebase Setup (required for the online evaluation)
 
-This repository does not include this file: "app/google-services.json" 
+This repository does not include this file: `app/google-services.json`
 because it is ignored for security reasons.
 
 To run the project with Firebase/Firestore:
 
 1. Go to the Firebase Console and create a new Firebase Project
 2. Add an Android application to the Firebase project using the package name:
-- "com.example.productscanner"
+- `com.example.productscanner`
 3. Download the generated file:
-- "google-services.json"
+- `google-services.json`
 4. Put the file here (important):
-- "<root-project>/app/google-services.json"
+- `<root-project>/app/google-services.json`
 5. Do Gradle Sync and run the application again
 
 1) Correct location:
-- "<root-project>/app/google-services.json"
+- `<root-project>/app/google-services.json`
 2) Wrong locations (don't put it here):
-- "<root-project>/google-services.json"
-- "<root-project>/app/src/main/"
-- "<root-project>/gradle"
+- `<root-project>/google-services.json`
+- `<root-project>/app/src/main/`
+- `<root-project>/gradle`
 
 ## Notes / Limitations
 
@@ -92,4 +92,3 @@ To run the project with Firebase/Firestore:
 quality / efficiency.
 3. Crop overlay is currently a UI preview; real crop (reading and scanning from selected zone)
 is planned as the next step.
-
