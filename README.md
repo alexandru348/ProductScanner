@@ -2,9 +2,9 @@
 
 Product Scanner is an Android application written in Kotlin
 that allows you to scan product barcodes and display a health-oriented rating.
-The project combines barcode scanning (ML Kit) with a simple UI flow and a crop overlay (preview)
-for better control over the image. The repository is public
-so sensitive / local configuration files are not included
+The project combines barcode scanning (ML Kit) with a simple UI flow and a crop overlay
+with real cropping and scanning the selected zone for better control over the image. 
+The repository is public, so sensitive / local configuration files are not included
 (for example, the Firebase file: "google-services.json").
 
 ## Features
@@ -16,12 +16,11 @@ so sensitive / local configuration files are not included
 - barcode scanning
 - displaying results (product name, barcode, category, health score, health bar, 
 comparative text)
-4. Crop overlay UI (preview):
+4. Crop overlay UI:
 - overlay rectangle over image
 - moving + resizing the rectangle
 - toggle for entering crop mode (enabling / disabling)
-*  Note: now it's only for preview UI interaction; the real crop (reading and scanning 
-from selected zone) is the next step.
+- real cropping and scanning selected zone
 
 ## Technologies used
 
@@ -90,5 +89,3 @@ To run the project with Firebase/Firestore:
 1. The application is designed on a simple and stable flow (image -> scan -> evaluation).
 2. Live scan is not implemented intentionally, to keep a very good ratio between simplicity /
 quality / efficiency.
-3. Crop overlay is currently a UI preview; real crop (reading and scanning from selected zone)
-is planned as the next step.
