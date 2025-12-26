@@ -3,9 +3,18 @@ package com.example.productscanner
 import android.Manifest
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import android.graphics.RectF
+import android.graphics.drawable.BitmapDrawable
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,22 +38,11 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
-import android.graphics.Matrix
-import android.graphics.RectF
-import android.graphics.drawable.BitmapDrawable
-
-
 
 
 class MainActivity : AppCompatActivity() {
 
-private lateinit var cameraBtn: MaterialButton
+    private lateinit var cameraBtn: MaterialButton
     private lateinit var galleryBtn: MaterialButton
     private lateinit var imageIv: ImageView
     private lateinit var scanBtn: MaterialButton
@@ -59,89 +57,91 @@ private lateinit var cameraBtn: MaterialButton
     private lateinit var resultLabelTv: TextView
 
 
-    companion object{
+    companion object {
 
         private const val CAMERA_REQUEST_CODE = 100
         private const val STORAGE_REQUEST_CODE = 101
 
-        private const val TAG ="MAIN_TAG"
+        private const val TAG = "MAIN_TAG"
     }
 
     private fun readImagePermission(): String =
-        if(Build.VERSION.SDK_INT >= 33){
+        if (Build.VERSION.SDK_INT >= 33) {
             Manifest.permission.READ_MEDIA_IMAGES
-        }
-    else{
+        } else {
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
+
     private fun needsWriteExternal(): Boolean =
         Build.VERSION.SDK_INT <= 28
 
 
+    private lateinit var cameraPermissions: Array<String>
+    private lateinit var storagePermissions: Array<String>
 
 
-       private lateinit var cameraPermissions: Array<String>
-       private lateinit var storagePermissions: Array<String>
+    private var imageUri: Uri? = null
+
+    private var previousImageUri: Uri? = null
 
 
-       private var imageUri: Uri? = null
+    private var isScanning = false
 
-       private var previousImageUri: Uri? = null
+    private var isCropMode = false
 
+    private val FALLBACK_MAX_SIZE = 1600
 
-       private var isScanning = false
+    private val takePhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
 
-       private var isCropMode = false
+            Log.d(
+                TAG,
+                "takePhotoResultLauncher result success=$success imageUri=$imageUri previous=$previousImageUri"
+            )
 
-       private val FALLBACK_MAX_SIZE = 1600
+            if (success && imageUri != null) {
+                imageIv.setImageURI(imageUri)
+                setCropMode(false)
+                updateCropAvailability(imageUri != null)
+                previousImageUri = null
+            } else {
+                // delete the empty MediaStore entry created for the camera capture
+                imageUri?.let { newUri ->
+                    if (newUri != previousImageUri) {
+                        try {
+                            contentResolver.delete(newUri, null, null)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
 
-       private val takePhotoLauncher =
-           registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+                imageUri = previousImageUri
+                imageIv.setImageURI(imageUri)
 
-               Log.d(TAG, "takePhotoResultLauncher result success=$success imageUri=$imageUri previous=$previousImageUri")
-
-                   if(success && imageUri != null) {
-                   imageIv.setImageURI(imageUri)
-                   setCropMode(false)
-                   updateCropAvailability(imageUri != null)
-                   previousImageUri = null
-               }
-               else {
-                   // delete the empty MediaStore entry created for the camera capture
-                   imageUri?.let { newUri ->
-                       if (newUri != previousImageUri) {
-                           try {
-                               contentResolver.delete(newUri, null, null)
-                           } catch (_: Exception) {}
-                       }
-                   }
-
-                   imageUri = previousImageUri
-                   imageIv.setImageURI(imageUri)
-
-                   val hasImage = (imageUri != null)
-                   updateCropAvailability(hasImage)
-                   previousImageUri = null
-                   showToast("No picture was taken")
-               }
-           }
+                val hasImage = (imageUri != null)
+                updateCropAvailability(hasImage)
+                previousImageUri = null
+                showToast("No picture was taken")
+            }
+        }
 
     private fun createImageUri(): Uri? {
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "scan_${System.currentTimeMillis()}.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ProductScanner")
             }
         }
         return contentResolver.insert(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            contentValues)
+            contentValues
+        )
     }
 
     private fun startCameraCapture() {
         Log.d(TAG, "startCameraCapture() oldImageUri=$imageUri")
-        if(!checkCameraPermissions()) {
+        if (!checkCameraPermissions()) {
             requestCameraPermission()
             return
         }
@@ -152,7 +152,7 @@ private lateinit var cameraBtn: MaterialButton
         updateCropAvailability(false)
 
         imageUri = createImageUri()
-        if(imageUri == null) {
+        if (imageUri == null) {
             imageUri = previousImageUri
             imageIv.setImageURI(imageUri) // to make sure the UI is correct
 
@@ -168,25 +168,24 @@ private lateinit var cameraBtn: MaterialButton
         takePhotoLauncher.launch(imageUri)
     }
 
-       private var barcodeScannerOptions: BarcodeScannerOptions? = null
-       private var barcodeScanner: BarcodeScanner? = null
+    private var barcodeScannerOptions: BarcodeScannerOptions? = null
+    private var barcodeScanner: BarcodeScanner? = null
 
-       private val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()){
-          uri ->
-           if(uri != null) {
-               imageUri = uri
-               imageIv.setImageURI(uri)
-               setCropMode(false)
-               updateCropAvailability(imageUri != null)
-           }
-           else {
-               setCropMode(false)
-               updateCropAvailability(imageUri != null)
-               if (imageUri == null) {
-                   showToast("Cancelled...")
-               }
-           }
-       }
+    private val pickMedia =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri != null) {
+                imageUri = uri
+                imageIv.setImageURI(uri)
+                setCropMode(false)
+                updateCropAvailability(imageUri != null)
+            } else {
+                setCropMode(false)
+                updateCropAvailability(imageUri != null)
+                if (imageUri == null) {
+                    showToast("Cancelled...")
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -217,12 +216,11 @@ private lateinit var cameraBtn: MaterialButton
         storagePermissions = arrayOf(readImagePermission())
 
         cameraPermissions =
-                if(needsWriteExternal()){
-                    arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-                else {
-                    arrayOf(Manifest.permission.CAMERA)
-                }
+            if (needsWriteExternal()) {
+                arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else {
+                arrayOf(Manifest.permission.CAMERA)
+            }
 
         // The following formats are supported:
         //
@@ -240,8 +238,10 @@ private lateinit var cameraBtn: MaterialButton
         //Aztec (FORMAT_AZTEC)
         //Data Matrix (FORMAT_DATA_MATRIX) //
         barcodeScannerOptions = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_EAN_8, Barcode.FORMAT_EAN_13,
-                Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
+            .setBarcodeFormats(
+                Barcode.FORMAT_EAN_8, Barcode.FORMAT_EAN_13,
+                Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E
+            )
             .build()
 
         barcodeScanner = BarcodeScanning.getClient(barcodeScannerOptions!!)
@@ -252,26 +252,24 @@ private lateinit var cameraBtn: MaterialButton
 
         galleryBtn.setOnClickListener {
 
-         if(Build.VERSION.SDK_INT >= 33) {
-             pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-         }
-         else {
-             if(checkStoragePermission()){
-                 pickImageGallery()
-             }
-             else {
-                 requestStoragePermission()
-             }
-         }
+            if (Build.VERSION.SDK_INT >= 33) {
+                pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            } else {
+                if (checkStoragePermission()) {
+                    pickImageGallery()
+                } else {
+                    requestStoragePermission()
+                }
+            }
         }
 
         scanBtn.setOnClickListener {
             val uri = imageUri
-            if(uri == null){
+            if (uri == null) {
                 showToast("Pick image first")
                 return@setOnClickListener
             }
-            if(isScanning) {
+            if (isScanning) {
                 return@setOnClickListener
             }
 
@@ -315,11 +313,9 @@ private lateinit var cameraBtn: MaterialButton
     override fun onDestroy() {
         try {
             barcodeScanner?.close()
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             Log.w(TAG, "Failed to close barcodeScanner", e)
-        }
-        finally {
+        } finally {
             barcodeScanner = null
         }
         super.onDestroy()
@@ -340,25 +336,27 @@ private lateinit var cameraBtn: MaterialButton
 
             scanner.process(inputImage)
                 .addOnSuccessListener { barcodes ->
-                Log.d(TAG, "onSuccess: barcodes.size = ${barcodes.size}")
-                barcodes.forEachIndexed { i, b  ->
-                    Log.d(TAG,
-                        "[$i] format=${b.format} rawValue=${b.rawValue} displayValue=${b.displayValue}")
-                }
+                    Log.d(TAG, "onSuccess: barcodes.size = ${barcodes.size}")
+                    barcodes.forEachIndexed { i, b ->
+                        Log.d(
+                            TAG,
+                            "[$i] format=${b.format} rawValue=${b.rawValue} displayValue=${b.displayValue}"
+                        )
+                    }
                     val hasSupported1D = barcodes.any { b ->
                         val v = b.rawValue?.trim()
                         val okFormat =
                             b.format == Barcode.FORMAT_EAN_8 ||
-                            b.format == Barcode.FORMAT_EAN_13 ||
-                            b.format == Barcode.FORMAT_UPC_A ||
-                            b.format == Barcode.FORMAT_UPC_E
+                                    b.format == Barcode.FORMAT_EAN_13 ||
+                                    b.format == Barcode.FORMAT_UPC_A ||
+                                    b.format == Barcode.FORMAT_UPC_E
                         okFormat && !v.isNullOrBlank()
                     }
 
                     val shouldRetry = !hasSupported1D
 
-                    if(shouldRetry && !triedDownscaled) {
-                        Log.d(TAG,"Fallback: retry with downscaled bitmap")
+                    if (shouldRetry && !triedDownscaled) {
+                        Log.d(TAG, "Fallback: retry with downscaled bitmap")
                         detectResultFromImageDownscaled(uri)
                     } else {
                         handleProductBarcodes(barcodes)
@@ -379,13 +377,13 @@ private lateinit var cameraBtn: MaterialButton
 
     private fun detectResultFromImageDownscaled(uri: Uri) {
         val scanner = barcodeScanner
-        if(scanner == null) {
+        if (scanner == null) {
             finishScanUi()
             return
         }
 
         val bmp = loadDownscaledBitmap(uri, FALLBACK_MAX_SIZE)
-        if(bmp == null) {
+        if (bmp == null) {
 
             showToast("Could not decode image")
             finishScanUi()
@@ -398,8 +396,11 @@ private lateinit var cameraBtn: MaterialButton
             scanner.process(inputImage)
                 .addOnSuccessListener { barcodes ->
                     Log.d(TAG, "downscaled onSuccess: barcodes.size=${barcodes.size}")
-                    barcodes.forEachIndexed { i,  b ->
-                        Log.d(TAG, "[DS $i] format=${b.format} raw=${b.rawValue} display=${b.displayValue}")
+                    barcodes.forEachIndexed { i, b ->
+                        Log.d(
+                            TAG,
+                            "[DS $i] format=${b.format} raw=${b.rawValue} display=${b.displayValue}"
+                        )
                     }
                     handleProductBarcodes(barcodes)
                 }
@@ -409,13 +410,13 @@ private lateinit var cameraBtn: MaterialButton
                 }
                 .addOnCompleteListener {
                     finishScanUi()
-                    if(!bmp.isRecycled) bmp.recycle()
+                    if (!bmp.isRecycled) bmp.recycle()
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Downscaled scan exception", e)
             showToast("Failed scanning due to ${e.message}")
             finishScanUi()
-            if(!bmp.isRecycled) bmp.recycle()
+            if (!bmp.isRecycled) bmp.recycle()
         }
     }
 
@@ -475,7 +476,10 @@ private lateinit var cameraBtn: MaterialButton
                 .addOnSuccessListener { barcodes ->
                     Log.d(TAG, "bitmap onSuccess: barcode.size=${barcodes.size}")
                     barcodes.forEachIndexed { i, b ->
-                        Log.d(TAG, "[BM $i] format=${b.format} raw=${b.rawValue} display=${b.displayValue}")
+                        Log.d(
+                            TAG,
+                            "[BM $i] format=${b.format} raw=${b.rawValue} display=${b.displayValue}"
+                        )
                     }
                     handleProductBarcodes(barcodes)
                 }
@@ -494,9 +498,10 @@ private lateinit var cameraBtn: MaterialButton
             if (!bitmap.isRecycled) bitmap.recycle()
         }
     }
+
     private fun loadDownscaledBitmap(uri: Uri, maxSize: Int): Bitmap? {
         return try {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val source = ImageDecoder.createSource(contentResolver, uri)
                 ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     val w = info.size.width
@@ -514,17 +519,17 @@ private lateinit var cameraBtn: MaterialButton
             } else {
 
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                contentResolver.openInputStream(uri)?.use {input ->
+                contentResolver.openInputStream(uri)?.use { input ->
                     BitmapFactory.decodeStream(input, null, bounds)
                 }
 
                 val (w, h) = bounds.outWidth to bounds.outHeight
-                if(w <= 0 || h <= 0) return null
+                if (w <= 0 || h <= 0) return null
 
                 val sample = calculateInSampleSize(w, h, maxSize)
 
                 val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-                contentResolver.openInputStream(uri)?.use{ input ->
+                contentResolver.openInputStream(uri)?.use { input ->
                     BitmapFactory.decodeStream(input, null, opts)
                 }
             }
@@ -541,8 +546,9 @@ private lateinit var cameraBtn: MaterialButton
         }
         return inSampleSize.coerceAtLeast(1)
     }
+
     private fun handleProductBarcodes(barcodes: List<Barcode>) {
-    Log.d(TAG, "handleProductBarcodes() got ${barcodes.size} items")
+        Log.d(TAG, "handleProductBarcodes() got ${barcodes.size} items")
         if (barcodes.isEmpty()) {
             productNameTv.text = ""
             barcodeTv.text = ""
@@ -559,15 +565,18 @@ private lateinit var cameraBtn: MaterialButton
         val productBarcodes = mutableListOf<String>()
 
         for ((i, barcode) in barcodes.withIndex()) {
-            Log.d(TAG, "[$i] format=${barcode.format} raw=${barcode.rawValue} display=${barcode.displayValue}")
+            Log.d(
+                TAG,
+                "[$i] format=${barcode.format} raw=${barcode.rawValue} display=${barcode.displayValue}"
+            )
             val value = barcode.rawValue?.trim() ?: continue
             val okFormat =
                 barcode.format == Barcode.FORMAT_EAN_8 ||
-                barcode.format == Barcode.FORMAT_EAN_13 ||
-                barcode.format == Barcode.FORMAT_UPC_A ||
-                barcode.format == Barcode.FORMAT_UPC_E
+                        barcode.format == Barcode.FORMAT_EAN_13 ||
+                        barcode.format == Barcode.FORMAT_UPC_A ||
+                        barcode.format == Barcode.FORMAT_UPC_E
 
-            if(okFormat && value.isNotBlank()) {
+            if (okFormat && value.isNotBlank()) {
                 productBarcodes += value
             }
         }
@@ -588,11 +597,17 @@ private lateinit var cameraBtn: MaterialButton
 
         val firstCode = productBarcodes.first()
 
-        Log.d("BARCODE", "Scanned barcode: $firstCode") // Log: print the first detected barcode value to Logcat so we know what is being sent further
+        Log.d(
+            "BARCODE",
+            "Scanned barcode: $firstCode"
+        ) // Log: print the first detected barcode value to Logcat so we know what is being sent further
 
-        if(!hasInternetConnection()) {
+        if (!hasInternetConnection()) {
 
-            Log.d("BARCODE", "No internet connection, using local repository") // Log: no internet -> skip Firestore and use local product database
+            Log.d(
+                "BARCODE",
+                "No internet connection, using local repository"
+            ) // Log: no internet -> skip Firestore and use local product database
 
             val evaluation = LocalProductRepository.evaluate(barcode = firstCode)
 
@@ -605,7 +620,10 @@ private lateinit var cameraBtn: MaterialButton
 
             onResult = { onlineEvaluation ->
 
-                Log.d("FIRESTORE", "onResult: onlineEvaluation = $onlineEvaluation") // Log: see what response came back from Firestore (null or a complete ProductEvaluation object)
+                Log.d(
+                    "FIRESTORE",
+                    "onResult: onlineEvaluation = $onlineEvaluation"
+                ) // Log: see what response came back from Firestore (null or a complete ProductEvaluation object)
 
                 val evaluation = onlineEvaluation
 
@@ -615,7 +633,11 @@ private lateinit var cameraBtn: MaterialButton
             },
 
             onError = { e ->
-                Log.e("BARCODE", "Error loading from Firestore", e) // Log (error): something went wrong while reading data from Firestore; print the exception for debugging
+                Log.e(
+                    "BARCODE",
+                    "Error loading from Firestore",
+                    e
+                ) // Log (error): something went wrong while reading data from Firestore; print the exception for debugging
 
                 val evaluation = LocalProductRepository.evaluate(barcode = firstCode)
 
@@ -714,7 +736,9 @@ private lateinit var cameraBtn: MaterialButton
                 type = "image/*"
                 setPackage(pkg)
             }
-            if (i.resolveActivity(pm) != null) { intent = i; break }
+            if (i.resolveActivity(pm) != null) {
+                intent = i; break
+            }
         }
 
         if (intent == null) {
@@ -744,7 +768,7 @@ private lateinit var cameraBtn: MaterialButton
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
 
-        // 1) User a ieșit din galerie / a dat Back / Cancel
+        // User exited the gallery / pressed Back / Cancel
         if (result.resultCode != Activity.RESULT_OK) {
             updateCropAvailability(imageUri != null)
             if (imageUri == null) {
@@ -753,11 +777,11 @@ private lateinit var cameraBtn: MaterialButton
             return@registerForActivityResult
         }
 
-        // 2) User a selectat ceva (sau ar trebui). Luăm Uri-ul.
+        // The user has selected something (or should have)
         val data = result.data
         val newUri: Uri? = data?.data
 
-        // 3) Dacă a intrat dar nu a ales nimic (sau provider-ul nu a întors uri)
+        // If the user entered but did not choose anything (or the provider did not return any information)
         if (newUri == null) {
             updateCropAvailability(imageUri != null)
             if (imageUri == null) {
@@ -766,13 +790,13 @@ private lateinit var cameraBtn: MaterialButton
             return@registerForActivityResult
         }
 
-        // 4) Avem Uri valid => păstrăm imaginea și activăm scan
+        // We have valid Uri => we keep the image and activate scan
         imageUri = newUri
         imageIv.setImageURI(newUri)
         setCropMode(false)
         updateCropAvailability(imageUri != null)
 
-        // 5) Încercăm să păstrăm permisiunea (merge în special cu ACTION_OPEN_DOCUMENT)
+        // We try to keep the permission (works especially with ACTION_OPEN_DOCUMENT)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 
             val persistable = (data?.flags ?: 0) and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
@@ -800,7 +824,7 @@ private lateinit var cameraBtn: MaterialButton
     }
 
 
-    private fun requestStoragePermission(){
+    private fun requestStoragePermission() {
 
         ActivityCompat.requestPermissions(this, storagePermissions, STORAGE_REQUEST_CODE)
     }
@@ -809,17 +833,16 @@ private lateinit var cameraBtn: MaterialButton
 
         val cam = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
                 PackageManager.PERMISSION_GRANTED
-        val writeOk = if(needsWriteExternal()){
+        val writeOk = if (needsWriteExternal()) {
             ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                     PackageManager.PERMISSION_GRANTED
-        }
-        else {
+        } else {
             true
         }
         return cam && writeOk
     }
 
-    private fun requestCameraPermission(){
+    private fun requestCameraPermission() {
 
         ActivityCompat.requestPermissions(this, cameraPermissions, CAMERA_REQUEST_CODE)
     }
@@ -831,40 +854,40 @@ private lateinit var cameraBtn: MaterialButton
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        when(requestCode){
+        when (requestCode) {
             CAMERA_REQUEST_CODE -> {
 
-                if(grantResults.isNotEmpty()){
+                if (grantResults.isNotEmpty()) {
 
-                    val cameraAccepted = grantResults.getOrNull(0) == PackageManager.PERMISSION_GRANTED
-                    val writeAccepted = if(needsWriteExternal()){
+                    val cameraAccepted =
+                        grantResults.getOrNull(0) == PackageManager.PERMISSION_GRANTED
+                    val writeAccepted = if (needsWriteExternal()) {
                         grantResults.getOrNull(1) == PackageManager.PERMISSION_GRANTED
-                    }
-                    else {
+                    } else {
                         true
                     }
 
-                    if(cameraAccepted == true && writeAccepted){
+                    if (cameraAccepted == true && writeAccepted) {
 
                         startCameraCapture()
-                    }
-                    else{
+                    } else {
 
                         showToast("Camera & Storage permissions are required")
                     }
                 }
             }
+
             STORAGE_REQUEST_CODE -> {
 
-                if(grantResults.isNotEmpty()){
+                if (grantResults.isNotEmpty()) {
 
-                    val storageAccepted = grantResults.getOrNull(0) == PackageManager.PERMISSION_GRANTED
+                    val storageAccepted =
+                        grantResults.getOrNull(0) == PackageManager.PERMISSION_GRANTED
 
-                    if(storageAccepted == true){
+                    if (storageAccepted == true) {
 
                         pickImageGallery()
-                    }
-                    else{
+                    } else {
 
                         showToast("Storage permission is required...")
                     }
@@ -873,8 +896,8 @@ private lateinit var cameraBtn: MaterialButton
         }
     }
 
-    private fun showToast(message: String){
-        Toast.makeText(this,message, Toast.LENGTH_SHORT).show()
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun finishScanUi() {
@@ -884,7 +907,7 @@ private lateinit var cameraBtn: MaterialButton
     }
 
     private fun updateCropAvailability(hasImage: Boolean) {
-        // Scan / Crop depends om: there is an image + the user is not scanning
+        // Scan / Crop depends on: there is an image + the user is not scanning
         val canInteract = hasImage && !isScanning
 
         cropBtn.isEnabled = canInteract
@@ -898,7 +921,7 @@ private lateinit var cameraBtn: MaterialButton
 
         // If the user doesn't have an image, there's no way to keep crop mode on
         if (!hasImage) {
-          setCropMode(false)
+            setCropMode(false)
         }
     }
 
@@ -910,7 +933,8 @@ private lateinit var cameraBtn: MaterialButton
 
     private fun hasInternetConnection(): Boolean {
 
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         val network = connectivityManager.activeNetwork ?: return false
 

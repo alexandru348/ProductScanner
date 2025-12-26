@@ -1,12 +1,17 @@
 package com.example.productscanner
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.abs
-import android.util.Log
 import kotlin.math.min
 
 
@@ -42,8 +47,11 @@ class CropOverlayView @JvmOverloads constructor(
     private var lastX = 0f
     private var lastY = 0f
 
-    private enum class Mode { NONE, MOVE, RESIZE_TL, RESIZE_TR, RESIZE_BL, RESIZE_BR,
-        RESIZE_TOP, RESIZE_BOTTOM, RESIZE_LEFT, RESIZE_RIGHT }
+    private enum class Mode {
+        NONE, MOVE, RESIZE_TL, RESIZE_TR, RESIZE_BL, RESIZE_BR,
+        RESIZE_TOP, RESIZE_BOTTOM, RESIZE_LEFT, RESIZE_RIGHT
+    }
+
     private var mode: Mode = Mode.NONE
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -96,7 +104,7 @@ class CropOverlayView @JvmOverloads constructor(
         val x = event.x
         val y = event.y
 
-        when(event.actionMasked) {
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 mode = hitTest(x, y)
                 Log.d("CropOverlay", "DOWN x=$x, y=$y, mode=$mode, rect=$cropRect")
@@ -127,18 +135,23 @@ class CropOverlayView @JvmOverloads constructor(
                     Mode.MOVE -> {
                         moveRect(dx, dy)
                     }
+
                     Mode.RESIZE_TL -> {
                         resizeLeft(dx); resizeTop(dy)
                     }
+
                     Mode.RESIZE_TR -> {
                         resizeRight(dx); resizeTop(dy)
                     }
+
                     Mode.RESIZE_BL -> {
                         resizeLeft(dx); resizeBottom(dy)
                     }
+
                     Mode.RESIZE_BR -> {
                         resizeRight(dx); resizeBottom(dy)
                     }
+
                     Mode.RESIZE_TOP -> {
                         resizeTop(dy)
                     }
@@ -146,12 +159,15 @@ class CropOverlayView @JvmOverloads constructor(
                     Mode.RESIZE_BOTTOM -> {
                         resizeBottom(dy)
                     }
+
                     Mode.RESIZE_LEFT -> {
                         resizeLeft(dx)
                     }
+
                     Mode.RESIZE_RIGHT -> {
                         resizeRight(dx)
                     }
+
                     else -> Unit
                 }
 
@@ -212,7 +228,7 @@ class CropOverlayView @JvmOverloads constructor(
     }
 
     private fun isNear(x: Float, y: Float, hx: Float, hy: Float): Boolean {
-        return abs(x - hx) <= handleTouchRadius && abs (y - hy) <= handleTouchRadius
+        return abs(x - hx) <= handleTouchRadius && abs(y - hy) <= handleTouchRadius
     }
 
     private fun moveRect(dx: Float, dy: Float) {
